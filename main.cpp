@@ -4,6 +4,8 @@
  * @file: main.cpp
  */
 
+//#include "/includes/packed_array.h"
+
 
 #include <assert.h>
 #include <stdio.h>
@@ -27,31 +29,54 @@ class RenderWorld
 {
 public:
 	RenderWorld(void)
-		: m_meshCount(0)
-	{
+		: mAiID(0), mNextFreeIndex(0), mIDToIndex{0}, m_meshCount(0)
+	{}
+
+
+	MeshID AddMesh(void) {
+		/// the ID returned to the user is the current auto-incremented ID
+		/// mAiID will be incremented every time AddMesh is called
+		unsigned int ret =  mAiID;
+
+		/// meshCount increases
+		m_meshCount++;
+
+		/// the associated index is stored in the MeshID - index map
+		mIDToIndex[mAiID] = mNextFreeIndex;
+
+		mAiID++;
+		mNextFreeIndex = mAiID;
+
+		return ret;
 	}
 
 
-	MeshID AddMesh(void)
-	{
-		// TODO: add your implementation here.
-		// thoroughly comment *what* you do, and *why* you do it (in german or english).
-		return 0;
+	void RemoveMesh(MeshID id) {
+
+		/// get the index associated with this id
+		int index = mIDToIndex[id];
+
+		/// if the element is not the last element it will be swapped with the last element to fill the hole
+		if(id != mAiID - 1)
+			m_meshes[index] = m_meshes[mNextFreeIndex-1];
+
+		/// updating the MeshID - index map, the index from mesh with id will be invalidated
+		mIDToIndex[mAiID - 1] = index;
+		mIDToIndex[id] = 0xFFFFFFFF;
+		/// update mesh count and the next free index
+		m_meshCount--;
+		mNextFreeIndex = index;
 	}
 
 
-	void RemoveMesh(MeshID id)
-	{
-		// TODO: add your implementation here.
-		// thoroughly comment *what* you do, and *why* you do it (in german or english).
-	}
+	Mesh* Lookup(MeshID id) {
+		/// check for an mesh that was already invalidated
+		if(mIDToIndex[id] == 0xFFFFFFFF)
+			return nullptr;
 
+		unsigned int index =  mIDToIndex[id];
 
-	Mesh* Lookup(MeshID id)
-	{
-		// TODO: add your implementation here.
-		// thoroughly comment *what* you do, and *why* you do it (in german or english).
-		return nullptr;
+		return &m_meshes[index];
 	}
 
 
@@ -61,17 +86,19 @@ public:
 	// a) m_meshCount is up-to-date
 	// b) m_meshes stores instances of Mesh contiguously, without any holes
 	// c) external MeshIDs still refer to the correct instances
-	void Iterate(void)
-	{
-		for (unsigned int i=0; i<m_meshCount; ++i)
-		{
+	void Iterate(void) {
+		for (unsigned int i=0; i<m_meshCount; ++i) {
 			printf("Mesh instance %d: dummy = %d\n", i, m_meshes[i].dummy);
 		}
 	}
 
 
 private:
-	// TODO: add other data structures you may need to implement.
+	//PackedArray<Mesh> mPacked;
+	unsigned int mAiID;
+	unsigned int mNextFreeIndex;
+
+	unsigned int mIDToIndex[MAX_MESH_COUNT];
 
 	// DO NOT CHANGE!
 	// these two members are here to stay. see comments regarding Iterate().
