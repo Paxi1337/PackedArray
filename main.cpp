@@ -2,9 +2,8 @@
  * PackedArray
  *
  * @file: main.cpp
+ * @authors: Christian Ondracek & Lukas Oberbichler
  */
-
-//#include "/includes/packed_array.h"
 
 
 #include <assert.h>
@@ -52,6 +51,7 @@ public:
 
 
 	void RemoveMesh(MeshID id) {
+		assert(id <= mAiID);
 
 		/// get the index associated with this id
 		int index = mIDToIndex[id];
@@ -70,6 +70,8 @@ public:
 
 
 	Mesh* Lookup(MeshID id) {
+		assert(id <= mAiID);
+
 		/// check for an mesh that was already invalidated
 		if(mIDToIndex[id] == 0xFFFFFFFF)
 			return nullptr;
@@ -94,7 +96,6 @@ public:
 
 
 private:
-	//PackedArray<Mesh> mPacked;
 	unsigned int mAiID;
 	unsigned int mNextFreeIndex;
 
