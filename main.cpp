@@ -51,7 +51,8 @@ public:
 
 
 	void RemoveMesh(MeshID id) {
-		assert(id <= mAiID);
+		/// make sure id is not the next free ID
+		assert(id < mAiID);
 
 		/// get the index associated with this id
 		int index = mIDToIndex[id];
@@ -70,7 +71,8 @@ public:
 
 
 	Mesh* Lookup(MeshID id) {
-		assert(id <= mAiID);
+		/// make sure id is not the next free ID
+		assert(id < mAiID);
 
 		/// check for an mesh that was already invalidated
 		if(mIDToIndex[id] == 0xFFFFFFFF)
@@ -137,7 +139,7 @@ int main(void)
 	// we now remove the second mesh (referenced by meshID1), which creates a hole in the world's data structure:
 	// [Mesh][Empty][Mesh]
 	// the world should internally update its data structure(s), so that the other two remaining meshes are stored contiguously in memory.
-	rw.RemoveMesh(meshID1);
+	rw.RemoveMesh(3);
 
 	// iteration must still work, because the instances are contiguous in memory.
 	rw.Iterate();
