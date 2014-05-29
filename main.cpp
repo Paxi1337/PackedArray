@@ -9,10 +9,11 @@
 #include <assert.h>
 #include <stdio.h>
 
+#define DEBUG_TEST 1
 
 typedef unsigned int MeshID;
 
-static const unsigned int MAX_MESH_COUNT = 256;
+static const unsigned int MAX_MESH_COUNT = 5;
 
 struct Mesh
 {
@@ -40,11 +41,14 @@ public:
 		/// meshCount increases
 		m_meshCount++;
 
+		mMap[mAiID].id = mAiID;
+		mMap[mAiID].index = mNextFreeIndex;
+
 		/// the associated index is stored in the MeshID - index map
 		mIDToIndex[mAiID] = mNextFreeIndex;
 
 		mAiID++;
-		mNextFreeIndex = mAiID;
+		mNextFreeIndex++;
 
 		return ret;
 	}
@@ -55,18 +59,24 @@ public:
 		assert(id < mAiID);
 
 		/// get the index associated with this id
-		int index = mIDToIndex[id];
+//		unsigned int index = mIDToIndex[id];
+		unsigned int index = mMap[id].index;
 
 		/// if the element is not the last element it will be swapped with the last element to fill the hole
-		if(id != mAiID - 1)
-			m_meshes[index] = m_meshes[mNextFreeIndex-1];
+		if(index != mAiID - 1)
+			m_meshes[index] = m_meshes[mNextFreeIndex - 1];
+
+		mMap[id].id = 0xFFFFFFFF;
+		mMap[mNextFreeIndex - 1].index = index;
 
 		/// updating the MeshID - index map, the index from mesh with id will be invalidated
+		mNextFreeIndex = mNextFreeIndex - 1;
+
 		mIDToIndex[mAiID - 1] = index;
+
 		mIDToIndex[id] = 0xFFFFFFFF;
 		/// update mesh count and the next free index
 		m_meshCount--;
-		mNextFreeIndex = index;
 	}
 
 
@@ -75,10 +85,13 @@ public:
 		assert(id < mAiID);
 
 		/// check for an mesh that was already invalidated
-		if(mIDToIndex[id] == 0xFFFFFFFF)
+//		if(mIDToIndex[id] == 0xFFFFFFFF)
+//			return nullptr;
+
+		if(mMap[id].id == 0xFFFFFFFF)
 			return nullptr;
 
-		unsigned int index =  mIDToIndex[id];
+		unsigned int index = mMap[id].index;
 
 		return &m_meshes[index];
 	}
@@ -101,7 +114,13 @@ private:
 	unsigned int mAiID;
 	unsigned int mNextFreeIndex;
 
-	unsigned int mIDToIndex[MAX_MESH_COUNT];
+	struct mIDToIndex {
+		unsigned int id;
+		unsigned int index;
+	};
+
+	mIDToIndex mMap[MAX_MESH_COUNT * 2];
+	unsigned int mIDToIndex[MAX_MESH_COUNT * 2];
 
 	// DO NOT CHANGE!
 	// these two members are here to stay. see comments regarding Iterate().
@@ -114,6 +133,8 @@ private:
 int main(void)
 {
 	RenderWorld rw;
+
+#ifndef DEBUG_TEST
 
 	// add 3 meshes to the world. we only ever refer to them by their ID, the RenderWorld has complete ownership
 	// over the individual Mesh instances.
@@ -153,6 +174,52 @@ int main(void)
 	// the implementation should give an error, and return a nullptr in that case.
 	Mesh* mesh1 = rw.Lookup(meshID1);
 	assert(mesh1 == nullptr);
+
+#else
+	/**
+	 * TEST 1
+	 *
+	 * fill whole packed array and return all meshes
+	 */
+	for(unsigned int i = 0; i < MAX_MESH_COUNT; ++i) {
+		rw.AddMesh();
+	}
+
+	for(unsigned int i = 0; i < MAX_MESH_COUNT; ++i) {
+		Mesh* m = rw.Lookup(i);
+		m->dummy = i;
+	}
+
+	printf("\nTEST 1\n");
+	rw.Iterate();
+
+	/**
+	 * TEST 2
+	 *
+	 * delete first and last mesh and iterate
+	 */
+
+	rw.RemoveMesh(0);
+
+	printf("\n\n");
+	rw.Iterate();
+
+
+	rw.RemoveMesh(MAX_MESH_COUNT - 1);
+
+	rw.AddMesh();
+	rw.AddMesh();
+
+	Mesh* m1 = rw.Lookup(5);
+	m1->dummy = 5;
+
+	Mesh* m2 = rw.Lookup(6);
+	m2->dummy = 6;
+
+	printf("\nTEST 2\n");
+
+	rw.Iterate();
+#endif
 
 	return 0;
 }
