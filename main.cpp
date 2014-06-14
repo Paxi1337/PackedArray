@@ -44,9 +44,6 @@ public:
 		mMap[mAiID].id = mAiID;
 		mMap[mAiID].index = mNextFreeIndex;
 
-		/// the associated index is stored in the MeshID - index map
-		mIDToIndex[mAiID] = mNextFreeIndex;
-
 		mAiID++;
 		mNextFreeIndex++;
 
@@ -56,10 +53,9 @@ public:
 
 	void RemoveMesh(MeshID id) {
 		/// make sure id is not the next free ID
-		assert(id < mAiID);
+		assert(id >= 0 && id < mAiID);
 
 		/// get the index associated with this id
-//		unsigned int index = mIDToIndex[id];
 		unsigned int index = mMap[id].index;
 
 		/// if the element is not the last element it will be swapped with the last element to fill the hole
@@ -72,9 +68,6 @@ public:
 		/// updating the MeshID - index map, the index from mesh with id will be invalidated
 		mNextFreeIndex = mNextFreeIndex - 1;
 
-		mIDToIndex[mAiID - 1] = index;
-
-		mIDToIndex[id] = 0xFFFFFFFF;
 		/// update mesh count and the next free index
 		m_meshCount--;
 	}
@@ -85,9 +78,6 @@ public:
 		assert(id < mAiID);
 
 		/// check for an mesh that was already invalidated
-//		if(mIDToIndex[id] == 0xFFFFFFFF)
-//			return nullptr;
-
 		if(mMap[id].id == 0xFFFFFFFF)
 			return nullptr;
 
@@ -121,8 +111,7 @@ private:
 		unsigned int index;
 	};
 
-	IDToIndex mMap[MAX_MESH_COUNT * 2];
-	unsigned int mIDToIndex[MAX_MESH_COUNT * 2];
+	IDToIndex mMap[MAX_MESH_COUNT];
 
 	// DO NOT CHANGE!
 	// these two members are here to stay. see comments regarding Iterate().
