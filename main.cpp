@@ -34,17 +34,19 @@ public:
 
 
 	MeshID AddMesh(void) {
-		assert(mAiID < MAX_MESH_COUNT);
+		assert(mNextFreeIndex < MAX_MESH_COUNT);
 
 		/// the ID returned to the user is the current auto-incremented ID
 		/// mAiID will be incremented every time AddMesh is called
 		unsigned int ret =  mAiID;
 
+		unsigned int newIndex = mAiID % MAX_MESH_COUNT;
+
 		/// meshCount increases
 		m_meshCount++;
 
-		mMap[mAiID].id = mAiID;
-		mMap[mAiID].index = mNextFreeIndex;
+		mMap[newIndex].id = mAiID;
+		mMap[newIndex].index = mNextFreeIndex;
 
 		mAiID++;
 		mNextFreeIndex++;
@@ -199,16 +201,27 @@ int main(void)
 		rw.RemoveMesh(i);
 	}
 
-	for (unsigned int i = MAX_MESH_COUNT - 1; i > 0; --i) {
+	/*for (unsigned int i = MAX_MESH_COUNT - 1; i > 0; --i) {
 		rw.RemoveMesh(i);
 	}
 
-	rw.RemoveMesh(0);
+	rw.RemoveMesh(0);*/
 
 	printf("\n\n");
 	rw.Iterate();
 
+
+	for (unsigned int i = 0; i < MAX_MESH_COUNT; ++i) {
+		rw.AddMesh();
+	}
+
 	Mesh* m1 = rw.Lookup(0);
+	m1->dummy = 5;
+
+	rw.RemoveMesh(1);
+
+	//Mesh* m2 = rw.Lookup(3);
+	m1 = rw.Lookup(0);
 
 
 	//rw.RemoveMesh(MAX_MESH_COUNT - 1);
