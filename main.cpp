@@ -9,7 +9,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-#define DEBUG_TEST 1
+#define DEBUG_TEST 0
 
 typedef unsigned int MeshID;
 
@@ -34,6 +34,8 @@ public:
 
 
 	MeshID AddMesh(void) {
+		assert(mAiID < MAX_MESH_COUNT);
+
 		/// the ID returned to the user is the current auto-incremented ID
 		/// mAiID will be incremented every time AddMesh is called
 		unsigned int ret =  mAiID;
@@ -53,10 +55,13 @@ public:
 
 	void RemoveMesh(MeshID id) {
 		/// make sure id is not the next free ID
-		assert(id >= 0 && id < mAiID);
+		assert(id < mAiID);
 
 		/// get the index associated with this id
 		unsigned int index = mMap[id].index;
+
+		/// disallow removing a mesh that was already invalidated
+		assert(mMap[id].id != 0xFFFFFFFF);
 
 		/// if the element is not the last element it will be swapped with the last element to fill the hole
 		if(index != mAiID - 1)
@@ -190,22 +195,32 @@ int main(void)
 	 * delete first and last mesh and iterate
 	 */
 
+	for (unsigned int i = 0; i < MAX_MESH_COUNT; ++i) {
+		rw.RemoveMesh(i);
+	}
+
+	for (unsigned int i = MAX_MESH_COUNT - 1; i > 0; --i) {
+		rw.RemoveMesh(i);
+	}
+
 	rw.RemoveMesh(0);
 
 	printf("\n\n");
 	rw.Iterate();
 
+	Mesh* m1 = rw.Lookup(0);
 
-	rw.RemoveMesh(MAX_MESH_COUNT - 1);
 
-	rw.AddMesh();
-	rw.AddMesh();
+	//rw.RemoveMesh(MAX_MESH_COUNT - 1);
 
-	Mesh* m1 = rw.Lookup(5);
-	m1->dummy = 5;
+	//rw.AddMesh();
+	//rw.AddMesh();
 
-	Mesh* m2 = rw.Lookup(6);
-	m2->dummy = 6;
+	//Mesh* m1 = rw.Lookup(5);
+	//m1->dummy = 5;
+
+	//Mesh* m2 = rw.Lookup(6);
+	//m2->dummy = 6;
 
 	printf("\nTEST 2\n");
 
