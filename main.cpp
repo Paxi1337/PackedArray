@@ -29,7 +29,7 @@ class RenderWorld
 {
 public:
 	RenderWorld(void)
-		: mAiID(0), mNextFreeIndex(0), mIDToIndex{0}, m_meshCount(0)
+		: mAiID(0), mNextFreeIndex(0), m_meshCount(0)
 	{}
 
 
@@ -114,12 +114,14 @@ private:
 	unsigned int mAiID;
 	unsigned int mNextFreeIndex;
 
-	struct mIDToIndex {
+	struct IDToIndex {
+		IDToIndex() : id(0), index(0) {}
+
 		unsigned int id;
 		unsigned int index;
 	};
 
-	mIDToIndex mMap[MAX_MESH_COUNT * 2];
+	IDToIndex mMap[MAX_MESH_COUNT * 2];
 	unsigned int mIDToIndex[MAX_MESH_COUNT * 2];
 
 	// DO NOT CHANGE!
