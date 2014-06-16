@@ -13,7 +13,7 @@
 
 typedef unsigned int MeshID;
 
-static const unsigned int MAX_MESH_COUNT = 5;
+static const unsigned int MAX_MESH_COUNT = 255;
 
 struct Mesh
 {
@@ -29,51 +29,52 @@ class RenderWorld
 {
 public:
 	RenderWorld(void)
-		: mAiID(0), mNextFreeIndex(0), m_meshCount(0)
+		: mOverriddenCount{0}, m_meshCount(0), mMaxID(0)
 	{}
 
 
 	MeshID AddMesh(void) {
-		assert(mNextFreeIndex < MAX_MESH_COUNT);
+		assert(m_meshCount < MAX_MESH_COUNT);
 
-		/// the ID returned to the user is the current auto-incremented ID
-		/// mAiID will be incremented every time AddMesh is called
-		unsigned int ret =  mAiID;
+		unsigned int index = ((m_meshCount + MAX_MESH_COUNT) % MAX_MESH_COUNT);
 
-		unsigned int newIndex = mAiID % MAX_MESH_COUNT;
+		unsigned int ID = index + 1;
+
+		ID += (mOverriddenCount[index]*MAX_MESH_COUNT);
+
+		/// maxID is used to determine later on if a user want to access or remove
+		/// a MeshID that has not been created yet
+		if(ID > mMaxID) {
+			mMaxID = ID;
+		}
 
 		/// meshCount increases
 		m_meshCount++;
 
-		mMap[newIndex].id = mAiID;
-		mMap[newIndex].index = mNextFreeIndex;
 
-		mAiID++;
-		mNextFreeIndex++;
-
-		return ret;
+		return ID;
 	}
 
 
 	void RemoveMesh(MeshID id) {
-		/// make sure id is not the next free ID
-		assert(id < mAiID);
+		/// we need 0 based IDs for the following to work
+		/// but the user gets 1 based IDs
+		id--;
+
+		/// make sure id is not bigger than the current maximum ID
+		assert(id <= mMaxID);
 
 		/// get the index associated with this id
-		unsigned int index = mMap[id].index;
+		unsigned int index = (id + MAX_MESH_COUNT) %  MAX_MESH_COUNT;
 
 		/// disallow removing a mesh that was already invalidated
-		assert(mMap[id].id != 0xFFFFFFFF);
+		assert(id >= mOverriddenCount[index] * MAX_MESH_COUNT);
 
 		/// if the element is not the last element it will be swapped with the last element to fill the hole
-		if(index != mAiID - 1)
-			m_meshes[index] = m_meshes[mNextFreeIndex - 1];
+		if(index != m_meshCount)
+			m_meshes[index] = m_meshes[m_meshCount];
 
-		mMap[id].id = 0xFFFFFFFF;
-		mMap[mNextFreeIndex - 1].index = index;
-
-		/// updating the MeshID - index map, the index from mesh with id will be invalidated
-		mNextFreeIndex = mNextFreeIndex - 1;
+		mOverriddenCount[index]++;
 
 		/// update mesh count and the next free index
 		m_meshCount--;
@@ -81,14 +82,18 @@ public:
 
 
 	Mesh* Lookup(MeshID id) {
-		/// make sure id is not the next free ID
-		assert(id < mAiID);
+		/// we need 0 based IDs for the following to work
+		/// but the user gets 1 based IDs
+		id--;
 
-		/// check for an mesh that was already invalidated
-		if(mMap[id].id == 0xFFFFFFFF)
+		/// make sure id is not bigger than the current maximum ID
+		assert(id <= mMaxID);
+
+		unsigned int index = (id + MAX_MESH_COUNT) %  MAX_MESH_COUNT;
+
+		/// a mesh is invalid if the ID is smaller than overriden * MAX_MESH_COUNT
+		if(id < mOverriddenCount[index] * MAX_MESH_COUNT)
 			return nullptr;
-
-		unsigned int index = mMap[id].index;
 
 		return &m_meshes[index];
 	}
@@ -108,22 +113,15 @@ public:
 
 
 private:
-	unsigned int mAiID;
-	unsigned int mNextFreeIndex;
-
-	struct IDToIndex {
-		IDToIndex() : id(0), index(0) {}
-
-		unsigned int id;
-		unsigned int index;
-	};
-
-	IDToIndex mMap[MAX_MESH_COUNT];
+	unsigned int mOverriddenCount[MAX_MESH_COUNT];
+	unsigned int m_meshCount;
+	// used for assert int RemoveMesh
+	unsigned int mMaxID;
 
 	// DO NOT CHANGE!
 	// these two members are here to stay. see comments regarding Iterate().
 	Mesh m_meshes[MAX_MESH_COUNT];
-	unsigned int m_meshCount;
+
 };
 
 
@@ -132,7 +130,7 @@ int main(void)
 {
 	RenderWorld rw;
 
-#ifndef DEBUG_TEST
+#if DEBUG_TEST
 
 	// add 3 meshes to the world. we only ever refer to them by their ID, the RenderWorld has complete ownership
 	// over the individual Mesh instances.
@@ -158,7 +156,7 @@ int main(void)
 	// we now remove the second mesh (referenced by meshID1), which creates a hole in the world's data structure:
 	// [Mesh][Empty][Mesh]
 	// the world should internally update its data structure(s), so that the other two remaining meshes are stored contiguously in memory.
-	rw.RemoveMesh(3);
+	rw.RemoveMesh(meshID1);
 
 	// iteration must still work, because the instances are contiguous in memory.
 	rw.Iterate();
@@ -183,7 +181,7 @@ int main(void)
 		rw.AddMesh();
 	}
 
-	for(unsigned int i = 0; i < MAX_MESH_COUNT; ++i) {
+	for(unsigned int i = 1; i < MAX_MESH_COUNT + 1; ++i) {
 		Mesh* m = rw.Lookup(i);
 		m->dummy = i;
 	}
@@ -197,7 +195,7 @@ int main(void)
 	 * delete first and last mesh and iterate
 	 */
 
-	for (unsigned int i = 0; i < MAX_MESH_COUNT; ++i) {
+	for (unsigned int i = 1; i < MAX_MESH_COUNT + 1; ++i) {
 		rw.RemoveMesh(i);
 	}
 
@@ -215,13 +213,13 @@ int main(void)
 		rw.AddMesh();
 	}
 
-	Mesh* m1 = rw.Lookup(0);
-	m1->dummy = 5;
+	//Mesh* m1 = rw.Lookup(0);
+	//m1->dummy = 5;
 
-	rw.RemoveMesh(1);
+	//rw.RemoveMesh(1);
 
 	//Mesh* m2 = rw.Lookup(3);
-	m1 = rw.Lookup(0);
+	//m1 = rw.Lookup(0);
 
 
 	//rw.RemoveMesh(MAX_MESH_COUNT - 1);
@@ -229,8 +227,17 @@ int main(void)
 	//rw.AddMesh();
 	//rw.AddMesh();
 
-	//Mesh* m1 = rw.Lookup(5);
-	//m1->dummy = 5;
+
+
+	Mesh* m1 = rw.Lookup(300);
+	m1->dummy = 5;
+
+	Mesh* m2 = rw.Lookup(2);
+	(void)sizeof(m2);
+
+	//rw.RemoveMesh(2048);
+
+	//m2->dummy = 10;
 
 	//Mesh* m2 = rw.Lookup(6);
 	//m2->dummy = 6;
