@@ -8,8 +8,9 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <memory>
 
-#define DEBUG_TEST 0
+#define DEBUG_TEST 1
 
 typedef unsigned int MeshID;
 
@@ -29,8 +30,12 @@ class RenderWorld
 {
 public:
 	RenderWorld(void)
-		: mOverriddenCount{0}, m_meshCount(0), mMaxID(0)
-	{}
+		: m_meshCount(0), mMaxID(0)
+	{
+		// VS argues about "cannot specify explicit initializer for arrays" when using {0} for initalizing mOverridenCount (works with GCC)
+		// therefore it cannot be initialized in initializer list
+		std::memset(mOverriddenCount, 0, sizeof(mOverriddenCount));
+	}
 
 
 	MeshID AddMesh(void) {
@@ -72,7 +77,7 @@ public:
 
 		/// if the element is not the last element it will be swapped with the last element to fill the hole
 		if(index != m_meshCount)
-			m_meshes[index] = m_meshes[m_meshCount];
+			m_meshes[index] = m_meshes[m_meshCount - 1];
 
 		mOverriddenCount[index]++;
 
